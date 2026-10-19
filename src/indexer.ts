@@ -23,8 +23,8 @@ export class ToolCallIndexer {
 
     const branch = ctx.sessionManager.getBranch();
     for (const entry of branch) {
-      if (entry.type === "custom" && (entry as any).customType === CUSTOM_TYPE_INDEX) {
-        const data = (entry as any).data as IndexEntryData;
+      if (entry.type === "custom" && entry.customType === CUSTOM_TYPE_INDEX) {
+        const data = entry.data as IndexEntryData;
         if (data && Array.isArray(data.toolCalls)) {
           for (const toolCall of data.toolCalls) {
             this.index.set(toolCall.toolCallId, toolCall);
@@ -33,8 +33,8 @@ export class ToolCallIndexer {
         continue;
       }
 
-      if (entry.type === "custom_message" && (entry as any).customType === CUSTOM_TYPE_SUMMARY) {
-        const refs = normalizeSummaryToolCallRefs((entry as any).details);
+      if (entry.type === "custom_message" && entry.customType === CUSTOM_TYPE_SUMMARY) {
+        const refs = normalizeSummaryToolCallRefs(entry.details);
         this.registerSummaryRefs(refs);
       }
     }

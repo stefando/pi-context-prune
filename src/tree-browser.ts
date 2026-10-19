@@ -100,10 +100,9 @@ export function buildPruneTree(
 
   for (const entry of branch) {
     if (entry.type !== "custom_message") continue;
-    const customEntry = entry as any;
-    if (customEntry.customType !== CUSTOM_TYPE_SUMMARY) continue;
+    if (entry.customType !== CUSTOM_TYPE_SUMMARY) continue;
 
-    const details = customEntry.details as {
+    const details = entry.details as {
       toolCallRefs?: { shortId: string; toolCallId: string }[];
       toolCallIds?: string[];
       toolNames: string[];
@@ -125,7 +124,7 @@ export function buildPruneTree(
     }
 
     const storedSummaryText =
-      typeof customEntry.content === "string" ? customEntry.content : "";
+      typeof entry.content === "string" ? entry.content : "";
     const summaryText = unwrapSummaryForDisplay(storedSummaryText);
     const summaryChars = summaryText.length;
     const totalOriginalChars = children.reduce(

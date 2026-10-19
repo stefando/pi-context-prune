@@ -175,7 +175,7 @@ Accumulates cumulative token/cost stats for summarizer LLM calls and persists th
 ### `src/usage-report.ts` — External summarizer usage
 - Each provider final response with usage is recorded via captured `SessionManager.appendUsage("context_prune", …)` independently of whether its summary is used. The same hook updates `StatsAccumulator`.
 - pi-stats (>= 0.5.0) reads those Pi `type: "usage"` entries directly, so the extension no longer mirrors them into a separate sidecar file.
-- Requires `@earendil-works/pi-coding-agent >=0.86.0` for `appendUsage` and `UsageEntry`. Settings also resolve via `getAgentDir()` to honor `PI_CODING_AGENT_DIR`.
+- Requires `@earendil-works/pi-coding-agent >=1.3.0` for `appendUsage` and `UsageEntry`. Settings also resolve via `getAgentDir()` to honor `PI_CODING_AGENT_DIR`.
 
 ### `src/commands.ts` — `/pruner` command + settings overlay + renderer
 - **`SettingsOverlay`** — a TUI `Container` subclass that wraps a `SettingsList` with a `DynamicBorder` + title. Forwards `handleInput` and `invalidate` to the inner list so keyboard navigation works inside the overlay.

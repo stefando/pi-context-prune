@@ -33,7 +33,7 @@ The extension does append its own custom summary/index/frontier/stats entries to
 
 ## Installation
 
-Requires Pi `@earendil-works/pi-coding-agent` **0.86.0 or later** for session usage entries.
+Requires Pi `@earendil-works/pi-coding-agent` **1.3.0 or later** for session usage entries.
 
 ### Install from npm (stable releases)
 
