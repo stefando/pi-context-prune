@@ -454,6 +454,9 @@ export default function (pi: ExtensionAPI) {
     hydrateFromSession(ctx);
     // Pending batches belong to the old branch — discard them
     pendingBatches.length = 0;
+    // Pi 1.4+ restores a branch's active tools on navigation, so re-apply the
+    // config-driven activation of context_prune instead of trusting the branch.
+    syncToolActivation();
   });
 
   // ── turn_end: capture batch, flush immediately or queue ──────────────────

@@ -52,7 +52,7 @@ Wires all modules together and registers Pi event handlers:
 
 - **`syncToolActivation()`** — activates or deactivates the `context_prune` tool in the Pi active-tools list based on whether `enabled && pruneOn === "agentic-auto"`. Uses `pi.getActiveTools()` / `pi.setActiveTools()` (ExtensionAPI, not ExtensionContext).
 - **`session_start`** — loads config from `~/.pi/agent/context-prune/settings.json`, rebuilds the in-memory index and stats accumulator, clears `pendingBatches`, updates the footer status widget, calls `syncToolActivation()`, and notifies the user of the loaded state.
-- **`session_tree`** — rebuilds the index and stats accumulator after branch navigation (pending batches and stats belong to the current branch).
+- **`session_tree`** — rebuilds the index and stats accumulator after branch navigation (pending batches and stats belong to the current branch) and re-runs `syncToolActivation()`, because Pi 1.4+ restores a branch's active tools on navigation.
 - **`turn_end`** — captures the batch (filtering out any `context_prune` tool call to avoid re-queuing agentic-auto housekeeping), pushes to `pendingBatches`. Behavior depends on `pruneOn` mode:
   - `every-turn`: flushes immediately with `delivery: "session"`.
   - `on-context-tag` / `on-demand` / `agent-message` / `agentic-auto`: queues and notifies the user of pending count and trigger.
@@ -132,7 +132,7 @@ Registers a Pi tool that allows the LLM (or user) to recover pruned outputs:
 - Returns `{ content, details: { results } }` with found records in the `details` field.
 
 ### `src/context-prune-tool.ts` — `context_prune` tool (agentic-auto mode)
-Registers the `context_prune` tool with Pi. The tool is **always registered** (so Pi knows about it), but is only added to the active tools list when `pruneOn === "agentic-auto"` and `enabled === true`. Activation/deactivation is handled in `index.ts` via `syncToolActivation()` → `pi.setActiveTools()`.
+Registers the `context_prune` tool with Pi. The tool is **always registered** (so Pi knows about it), but is only added to the active tools list when `pruneOn === "agentic-auto"` and `enabled === true`. Activation/deactivation is handled in `index.ts` via `syncToolActivation()` → `pi.setActiveTools()`. Registered with `defaultActive: false` so Pi 1.4+ does not activate it on registration, session resume, or `/tree` navigation.
 - Takes no parameters — calling it flushes all pending batches via `flushPending(ctx, { delivery: "runtime" })`.
 - Uses the tool `onUpdate` callback to stream compact live progress text into the running tool output box (e.g. `Context prune running… batch 2/4 · 1.2k chars received`).
 - Returns a typed `FlushResult` describing how many batches and tool calls were summarized, or a reason if the flush did not run (empty, already-flushing, stale-context, etc.).
@@ -176,6 +176,7 @@ Accumulates cumulative token/cost stats for summarizer LLM calls and persists th
 - Each provider final response with usage is recorded via captured `SessionManager.appendUsage("context_prune", …)` independently of whether its summary is used. The same hook updates `StatsAccumulator`.
 - pi-stats (>= 0.5.0) reads those Pi `type: "usage"` entries directly, so the extension no longer mirrors them into a separate sidecar file.
 - Requires `@earendil-works/pi-coding-agent >=1.3.0` for `appendUsage` and `UsageEntry`. Settings also resolve via `getAgentDir()` to honor `PI_CODING_AGENT_DIR`.
+- Tool parameter schemas import `Type` from `typebox` (not `@sinclair/typebox`) and the build keeps it external, so the bundle uses Pi's bundled TypeBox instead of shipping a second copy. The dev dependency is pinned to the exact `typebox` version Pi 1.5.0 bundles (`1.3.27`) so compile-time types match the runtime copy; bump it together with `@earendil-works/*`.
 
 ### `src/commands.ts` — `/pruner` command + settings overlay + renderer
 - **`SettingsOverlay`** — a TUI `Container` subclass that wraps a `SettingsList` with a `DynamicBorder` + title. Forwards `handleInput` and `invalidate` to the inner list so keyboard navigation works inside the overlay.
@@ -223,7 +224,7 @@ Accumulates cumulative token/cost stats for summarizer LLM calls and persists th
 | `pendingBatches` queue + `flushPending` | Decouples capture (always at `turn_end`) from summarization (mode-dependent). `flushPending` drains all pending batches into a **single** `summarizeBatches` LLM call, reducing round-trips from N to 1. |
 | `message_end` instead of `turn_end` for `agent-message` flush | `message_end` fires reliably at the final text-only response and before session teardown, giving time to capture the sessionManager before awaiting the summarizer LLM call. `turn_end` in print mode fires too late. |
 | `agent_end` as status update only | Avoids starting async LLM work after Pi may have disposed the session. If batches remain, the user sees a "N pending" status and can `/pruner now` next session. |
-| `context_prune` tool always registered, conditionally activated | Keeps Pi's tool registry consistent; `syncToolActivation()` adds/removes it from the active list on every config change without re-registering. |
+| `context_prune` tool always registered, conditionally activated | Keeps Pi's tool registry consistent; it is registered with `defaultActive: false` so Pi 1.4+ never auto-activates it on resume or `/tree` navigation, and `syncToolActivation()` adds/removes it from the active list on every config change, `session_start`, and `session_tree` without re-registering. |
 | `MultiBatchLoaderOverlay` for `/pruner now` | Shows per-batch spinner rows with live streamed summary-character counts, then checks each row off as its LLM call completes — gives concrete progress feedback instead of a single static "summarizing…" message. Sequential LLM calls are used only for this user-triggered path; auto-flush paths keep the parallel per-batch approach for efficiency |
 | `context_prune` onUpdate progress | Keeps the footer status simple while agentic-auto pruning still shows live progress in the running tool output box above the input |
 | `capturePendingBatches` extracted from `flushPending` | Lets `/pruner now` preview the queue before opening the overlay so it knows how many rows to pre-build. Avoids double-capture via `previewedBatches` option on `flushPending` |

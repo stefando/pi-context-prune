@@ -4,10 +4,14 @@
  *
  * The tool is always registered (so Pi knows about it), but it is only
  * added to the active tools list when pruneOn === "agentic-auto".
- * Activation/deactivation is handled in index.ts via ctx.setActiveTools().
+ * Activation/deactivation is handled in index.ts via pi.setActiveTools().
+ *
+ * `defaultActive: false` matters since Pi 1.4: tools registered without it are
+ * (re)activated when a session is resumed or /tree navigates to a branch, which
+ * would otherwise leak context_prune into non-agentic-auto modes.
  */
 
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 import type { AgentToolUpdateCallback, ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { CapturedBatch, FlushOptions } from "./types.js";
 import { CONTEXT_PRUNE_TOOL_NAME } from "./types.js";
@@ -53,6 +57,7 @@ export function registerContextPruneTool(
       "Do NOT use this tool for trivial or single tool calls — only when context is getting large.",
     ],
     parameters: Type.Object({}),
+    defaultActive: false,
 
     async execute(_toolCallId, _params, signal, onUpdate, ctx) {
       try {
